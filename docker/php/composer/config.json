@@ -1,5 +1,11 @@
 {
     "config": {
         "cache-dir": "/var/www/.composer/cache"
+    },
+    "repositories": {
+        "packagist": {
+            "type": "composer",
+            "url": "https://packagist.phpcomposer.com"
+        }
     }
 }
