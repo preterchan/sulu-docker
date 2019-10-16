@@ -1,45 +1,31 @@
-FROM php:7.3-fpm
+FROM php:7.3-fpm-alpine
 
 ARG PHP_TIMEZONE
 ARG PHP_MEMORY_LIMIT
 ARG USER_ID
 
-RUN apt-get update && apt-get install -y \
-    openssl \
-    git \
-    unzip \
-    libzip-dev \
-    libmagickwand-dev \
-    inkscape
+RUN apk add --update --no-cache openssl unzip libzip-dev autoconf inkscape
 
 # Install PHP extensions
-RUN docker-php-ext-install -j$(nproc) \
-        pdo \
-        pdo_mysql \
-        opcache \
-        zip
+RUN docker-php-ext-install -j$(nproc) pdo pdo_mysql opcache zip
 
-RUN apt-get install -y libicu-dev \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install intl
+RUN apk add --no-cache icu-dev && docker-php-ext-configure intl && docker-php-ext-install intl
 
-RUN pecl install \ 
-    xdebug \
-    imagick
+RUN pecl install xdebug imagick redis mongodb
 
-RUN docker-php-ext-enable \
-    xdebug \
-    imagick
+RUN docker-php-ext-enable xdebug imagick redis mongodb
+
+RUN apk add --no-cache librdkafka-dev && pecl install rdkafka && docker-php-ext-enable rdkafka
 
 # Install Blackfire
-RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
-    && curl -A "Docker" -o /tmp/blackfire-probe.tar.gz -D - -L -s https://blackfire.io/api/v1/releases/probe/php/linux/amd64/$version \
-    && tar zxpf /tmp/blackfire-probe.tar.gz -C /tmp \
-    && mv /tmp/blackfire-*.so $(php -r "echo ini_get('extension_dir');")/blackfire.so \
-    && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://blackfire:8707\n" > $PHP_INI_DIR/conf.d/blackfire.ini    
+# RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
+#     && curl -A "Docker" -o /tmp/blackfire-probe.tar.gz -D - -L -s https://blackfire.io/api/v1/releases/probe/php/linux/amd64/$version \
+#     && tar zxpf /tmp/blackfire-probe.tar.gz -C /tmp \
+#     && mv /tmp/blackfire-*.so $(php -r "echo ini_get('extension_dir');")/blackfire.so \
+#     && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://blackfire:8707\n" > $PHP_INI_DIR/conf.d/blackfire.ini    
 
 # Set timezone
-RUN ln -snf /usr/share/zoneinfo/${PHP_TIMEZONE} /etc/localtime && echo ${PHP_TIMEZONE} > /etc/timezone
+RUN ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo Asia/Shanghai > /etc/timezone
 
 # Install composer
 RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
