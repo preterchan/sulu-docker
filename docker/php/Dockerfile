@@ -1,35 +1,23 @@
-FROM php:7.3-fpm
+FROM php:5.6-fpm-alpine
 
 ARG PHP_TIMEZONE
 ARG PHP_MEMORY_LIMIT
 ARG USER_ID
 
-RUN apt-get update && apt-get install -y \
-    openssl \
-    git \
-    unzip \
-    libzip-dev \
-    libmagickwand-dev \
-    inkscape
+RUN apt-get update && apt-get install -y openssl libzip-dev libmagickwand-dev inkscape
+
+RUN apk add --update --no-cache jpeg-dev zlib-dev libmcrypt-dev freetype-dev
 
 # Install PHP extensions
-RUN docker-php-ext-install -j$(nproc) \
-        pdo \
-        pdo_mysql \
-        opcache \
-        zip
+RUN apk add --no-cache icu-dev && docker-php-ext-configure intl
 
-RUN apt-get install -y libicu-dev \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install intl
+RUN docker-php-ext-install -j$(nproc) gd mysql mysqli pdo pdo_mysql opcache zip mcrypt intl
 
-RUN pecl install \ 
-    xdebug \
-    imagick
+RUN pecl install imagick mongodb
 
-RUN docker-php-ext-enable \
-    xdebug \
-    imagick
+RUN docker-php-ext-enable gd mcrypt imagick mongodb mysql mysqli
+
+RUN apk add --no-cache librdkafka-dev && pecl install rdkafka && docker-php-ext-enable rdkafka
 
 # Install Blackfire
 RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
